@@ -54,7 +54,7 @@ add_random_height_noise = false; % Can be "true" or "false"
 nx=254; % Number of zonal gridpoints
 ny=50;  % Number of meridional gridpoints
 
-dx=100.0e3; % Zonal grid spacing (m)
+dx=100.0e3  ; % Zonal grid spacing (m)
 dy=dx;      % Meridional grid spacing
 
 % Specify the range of heights to plot in metres
