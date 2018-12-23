@@ -6,27 +6,17 @@
 % ----------------------------------------------------------------------------------------------------------------------------
 clear all; clc;
 %%%%%% CONSTANTES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%% ELEGIR CONDICIONES DE CONTORNO
-promediadas = 1; 
-no_desliz = 2; %u(0,y) = u(end,y) = v(x,0) = v(x,end) = 0 ---> NO SLIP CONDITION, NO DESLIZAMIENTO
-
-%OPCION ELEGIDA:
-
-conds_contorno = no_desliz;
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
 g    = 9.81; 
 
 
-dt = 120;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
+dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
 dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
-dias_del_exp = 3; %se usa luego más abajo para mostrar los datos
+dias_del_exp = 10; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
 
 
 nx=254; % Number of zonal gridpoints
-ny=70;  % Number of meridional gridpoints
+ny=50;  % Number of meridional gridpoints
 
 dx=1.0e6; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
 dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
@@ -91,40 +81,20 @@ for n = 1:nt %% iteramos para cada paso temporal
   [unext, vnext, hnext] = lax_wendroff(dx, dy, dt, g, u, v, h, ...
                                      SX_n_medio, SY_n_medio);
 
-  % Actualizamos las velocidades y la altura
+  % Actualizamos las velocidades y la altura, imponiendo las condiciones de contorno
+  
   u = unext([end 1:end 1],[1 1:end end]);
   v = vnext([end 1:end 1],[1 1:end end]);
+  u([1 end],:) = 0;
+  v(:,[1 end]) = 0;
   h(:,2:end-1) = hnext([end 1:end 1],:);
 
-  %IMPONEMOS CONDICIONES DE CONTORNO, PISAMOS DONDE QUEREMOS
-  % CONDS. DE CONTORNO PROMEDIADAS
-  if conds_contorno == 1
-     x_borde = ( h(2,:) + h(end-1,:) )./2;
-     h(1,:) = x_borde;
-     h(end,:) = x_borde;
-
-     y_borde = ( h(:,2) + h(:,end-1) )./2;
-     h(:,1) = y_borde;
-     h(:,end) = y_borde;
-     
-    u_borde = ( u(2,:) + u(end-1,:) )./2;
-    u(1,:) = u_borde;
-    u(end,:) = u_borde;
-
-
-    v_borde = ( v(:,2) + v(:,end-1) )./2;
-    v(:,1) = v_borde;
-    v(:,end) = v_borde;
-  end
-  
-  if conds_contorno == 2
-      v(:,[1 end]) = 0;
-     u([1 end],:) = 0;
-  end
-      
-
-
 end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -187,7 +157,7 @@ for it = 1:nframes
          v(3:interval:end, 3:interval:end)','k','linewidth',0.2);
 
  
-  xlabel('X - Distancia latitudinal');
+  xlabel('X - Distancia latitudinal (unidades en miles de km)');
   ylabel('Y - Distancia meridional');
   title(['\bf' titulo_altura]);
   text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
@@ -195,16 +165,36 @@ for it = 1:nframes
 
   daspect([1 1 1]);
   axis([0 max(x_1000km) 0 max(y_1000km)]);
-   colorbar
+  colorbar
    drawnow
-    F(it)=getframe(gcf);
-    s = size(F(it).cdata);
-    fprintf('%d %d\n', s(2), s(1))
-   %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+
+   eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
    
 end
 
-video = VideoWriter('video.avi');
-open(video)
-writeVideo(video,F)
-close(video)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%% VIDEO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% load the images
+ images    = cell(nframes,1);
+ for i=1:length(images)
+     images{i} = imread(sprintf('/home/jrr/Descargas/FINALES E1 MINOTTI/lax_w_matlab/frame%02d.png',i));
+ end
+ % create the video writer with 30 fps
+ writerObj = VideoWriter('video.avi');
+ writerObj.FrameRate = 10;
+   % open the video writer
+   open(writerObj);
+   % write the frames to the video
+    for u=1:10
+       % convert the image to a frame
+       frame = im2frame(images{u});
+       for v=1:10
+           writeVideo(writerObj, frame);
+       end
+   end
+   % close the writer object
+   close(writerObj);
+  % implay('Velocity.avi');

@@ -4,7 +4,7 @@
 %%%%%%%%%%               SWE en un CANAL utilizando el esquema numérico de LAX-WENDROFF
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ----------------------------------------------------------------------------------------------------------------------------
-
+clear all; clc;
 %%%%%% CONSTANTES
 g    = 9.81; 
 f = 0.; %fluido no rota
@@ -137,7 +137,13 @@ colormap(jet(ncol));
 interval = 6;
 
 % Decide whether to show height in metres or km
-
+if mean(rango_alturas) > 1000
+  height_scale = 0.001;
+  height_title = 'Height (km)';
+else
+  height_scale = 1;
+  height_title = 'Height (m)';
+end
 
 
 

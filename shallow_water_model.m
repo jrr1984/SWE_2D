@@ -34,10 +34,10 @@ SEA_MOUNT=4;
 % ------------------------------------------------------------------
 % SECTION 1: Configuration
 g    = 9.81;                % Acceleration due to gravity (m/s2)
-f    = 1e-4;              % Coriolis parameter (s-1)
-% f=0.;
-beta = 1.6e-11;             % Meridional gradient of f (s-1m-1)
-% beta=0.;
+%f    = 1e-4;              % Coriolis parameter (s-1)
+ f=0.;
+%beta = 1.6e-11;             % Meridional gradient of f (s-1m-1)
+ beta=0.;
 % beta=5e-10;
 
 dt_mins              = 1;   % Timestep (minutes)
