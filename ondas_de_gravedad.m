@@ -6,20 +6,29 @@
 % ----------------------------------------------------------------------------------------------------------------------------
 clear all; clc;
 %%%%%% CONSTANTES
-g    = 9.81; 
-f = 0.; %fluido no rota
-beta = 0;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% ELEGIR CONDICIONES DE CONTORNO
+promediadas = 1; 
+no_desliz = 2; %u(0,y) = u(end,y) = v(x,0) = v(x,end) = 0 ---> NO SLIP CONDITION, NO DESLIZAMIENTO
 
-dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
+%OPCION ELEGIDA:
+
+conds_contorno = promediadas;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+g    = 9.81; 
+
+
+dt = 120;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
 dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
-dias_del_exp = 4; %se usa luego más abajo para mostrar los datos
+dias_del_exp = 3; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
 
 
 nx=254; % Number of zonal gridpoints
-ny=50;  % Number of meridional gridpoints
+ny=150;  % Number of meridional gridpoints
 
-dx=100.0e3; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
+dx=1.0e6; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
 dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
 
 
@@ -37,197 +46,227 @@ y=(0:ny-1).*dy; % coordenada y, en metros ---> DISTANCIA MERIDIONAL
 %%%%% DEFINICIÓN DE H ---> OROGRAFÍA ELEGIDA, SUPERFICIE PLANA, MONTAÑA, ETC..
  H = zeros(nx, ny); %SUPERFICIE SÓLIDA DE ABAJO ES PLANA
 
-
-
 %%% CONDICIONES INICIALES PARA LA ALTURA DEL FLUIDO
-std_blob = 8.0.*dy; % Standard deviation of blob (m)
-   height = 9750 + 1000.*exp(-((X-0.25.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
-                                                     std_blob^2));
+std_blob = 10.0.*dy; % Standard deviation of blob (m)
+desplazamiento = 9700 + 1000.*exp(-((X-0.9.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
+                                                     std_blob^2)); %(X-centro de la gaussiana en x))
 
 
-% Coriolis parameter as a matrix of values varying in y only
-F = f+beta.*(Y-mean(y));
-
-% CONDICIÓN INICIAL PARA EL CAMPO DE VELOCIDADES DEL VIENTO: INICIALMENTE EN REPOSO
+   % CONDICIÓN INICIAL PARA EL CAMPO DE VELOCIDADES DEL VIENTO: INICIALMENTE EN REPOSO
 u=zeros(nx, ny);
 v=zeros(nx, ny);
 
 
+% Altura del fluido respecto de la orografía
+h = desplazamiento - H;
 
+% Inicializamos las variables donde vamos a guardar la data para graficar
+u_ = zeros(nx, ny, nframes);
+v_ = zeros(nx, ny, nframes);
+h_ = zeros(nx, ny, nframes);
+t_ = zeros(1, nframes);
 
+% indice p/guardar los datos que se va a ir actualizando con cada iteración
+i_ = 1;
 
-% Define h as the depth of the fluid (whereas "height" is the height of
-% the upper surface)
-h = height - H;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%                                  LOOP PRINCIPAL
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Initialize the 3D arrays where the output data will be stored
-u_save = zeros(nx, ny, nframes);
-v_save = zeros(nx, ny, nframes);
-h_save = zeros(nx, ny, nframes);
-t_save = zeros(1, nframes);
-
-% Index to stored data
-i_save = 1;
-% ------------------------------------------------------------------
-% SECTION 3: Main loop
-
-for n = 1:nt
-  % Every fixed number of timesteps we store the fields
+for n = 1:nt %% iteramos para cada paso temporal
+  %cada un número fijo de pasos nos guardamos las variables
   if mod(n-1,npasos_entre_outputs) == 0
-    max_u = sqrt(max(u(:).*u(:)+v(:).*v(:)));
-    disp(['Time = ' num2str((n-1)*dt/3600) ...
-	  ' hours (max ' num2str(dias_del_exp*24) ...
-		   '); max(|u|) = ' num2str(max_u)]);
-    u_save(:,:,i_save) = u;
-    v_save(:,:,i_save) = v;
-    h_save(:,:,i_save) = h;
-    t_save(i_save) = (n-1).*dt;
-    i_save = i_save+1;
+    u_(:,:,i_) = u; %en la 1era iteración agarra la cond inicial, u0=0, luego se va actualizando!
+    v_(:,:,i_) = v;
+    h_(:,:,i_) = h;
+    t_(i_) = (n-1).*dt;
+    i_ = i_+1;
   end
 
-  % Compute the accelerations
-  u_accel = F(2:end-1,2:end-1).*v(2:end-1,2:end-1) ...
-              - (g/(2*dx)).*(H(3:end,2:end-1)-H(1:end-2,2:end-1));
-  v_accel = -F(2:end-1,2:end-1).*u(2:end-1,2:end-1) ...
-              - (g/(2*dy)).*(H(2:end-1,3:end)-H(2:end-1,1:end-2));
+  % Determinamos los términos fuente/sumidero SX,SY, con f=0 en este caso
+  SX_n_medio = - (g/(2*dx)).*(H(3:end,2:end-1)-H(1:end-2,2:end-1));
+  SY_n_medio = - (g/(2*dy)).*(H(2:end-1,3:end)-H(2:end-1,1:end-2));
 
-  % Call the Lax-Wendroff scheme to move forward one timestep
-  [unew, vnew, h_new] = lax_wendroff(dx, dy, dt, g, u, v, h, ...
-                                     u_accel, v_accel);
+  %CORREMOS EL LAX-WENDROFF PARA MOVERNOS 1 PASO EN EL TIEMPO
+  [unext, vnext, hnext] = lax_wendroff(dx, dy, dt, g, u, v, h, ...
+                                     SX_n_medio, SY_n_medio);
 
-  % Update the wind and height fields, taking care to enforce 
-  % boundary conditions 
-  u = unew([end 1:end 1],[1 1:end end]);
-  v = vnew([end 1:end 1],[1 1:end end]);
-  v(:,[1 end]) = 0;
-  h(:,2:end-1) = h_new([end 1:end 1],:);
+  % Actualizamos las velocidades y la altura
+  u = unext([end 1:end 1],[1 1:end end]);
+  v = vnext([end 1:end 1],[1 1:end end]);
+  h(:,2:end-1) = hnext([end 1:end 1],:);
+
+  %IMPONEMOS CONDICIONES DE CONTORNO, PISAMOS DONDE QUEREMOS
+  % CONDS. DE CONTORNO PROMEDIADAS
+  if conds_contorno == 1
+     x_borde = ( h(2,:) + h(end-1,:) )./2;
+     h(1,:) = x_borde;
+     h(end,:) = x_borde;
+
+     y_borde = ( h(:,2) + h(:,end-1) )./2;
+     h(:,1) = y_borde;
+     h(:,end) = y_borde;
+     
+    u_borde = ( u(2,:) + u(end-1,:) )./2;
+    u(1,:) = u_borde;
+    u(end,:) = u_borde;
+
+
+    v_borde = ( v(:,2) + v(:,end-1) )./2;
+    v(:,1) = v_borde;
+    v(:,end) = v_borde;
+  end
+  
+  if conds_contorno == 2
+      v(:,[1 end]) = 0;
+     u([1 end],:) = 0;
+  end
+      
+
 
 end
 
-disp('Now run "animate" to animate the simulation');
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%                     ANIMACIÓN                                                           %%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-% This script animates the height field and the vorticity produced by
-% a shallow water model. It should be called only after shallow_water_model
-% has been run.
-
-% Set the size of the figure
-set(gcf,'units','inches');
-pos=get(gcf,'position');
-pos([3 4]) = [10.5 5];
-set(gcf,'position',pos)
-
-% Set other figure properties and draw now
-set(gcf,'defaultaxesfontsize',12,...
+set(gcf,'defaultaxesfontsize',20,...
     'paperpositionmode','auto','color','w');
 drawnow
 
-% Axis units are thousands of kilometers (x and y are in metres)
+% EJES EN MILES DE km, x e y están en metros
 x_1000km = x.*1e-6;
 y_1000km = y.*1e-6;
 
-% Set colormap to have 64 entries
-ncol=64;
+
+ncol=128;
 colormap(jet(ncol));
-% colormap(hclmultseq01);
-% colormap(flipud(cbrewer('div','RdBu',32)))
+%colormap(hsv(ncol));
 
-% Interval between arrows in the velocity vector plot
-interval = 6;
+%intervalo para el ploteo entre cada vector velocidad
+interval = 10; %6
 
-% Decide whether to show height in metres or km
 if mean(rango_alturas) > 1000
-  height_scale = 0.001;
-  height_title = 'Height (km)';
+  escala_altura = 0.001;
+  titulo_altura = 'Altura (km)';
 else
-  height_scale = 1;
-  height_title = 'Height (m)';
+  escala_altura = 1;
+  titulo_altura = 'Altura (m)';
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
- figure(1)
-% Loop through the frames of the animation
-for it = 1:nframes
-  clf
-
-  % Extract the height and velocity components for this frame
-  h = squeeze(h_save(:,:,it));
-  u = squeeze(u_save(:,:,it));
-  v = squeeze(v_save(:,:,it));
-
-  % First plot the height field
+  figure(1)
+ fig=gcf;
+fig.Units='normalized';
+fig.OuterPosition=[0 0 1 1];
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% h  %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
-  % Plot the height field
-  handle = image(x_1000km, y_1000km, (h'+H').*height_scale);
+ %LOOP PARA CADA FRAME DE LA ANIMACIÓN
+    
+for it = 1:nframes
+  clf %comando: Clear current figure window
+
+  % sacamos la altura y la componente de velocidad de cada frame, para cada it
+  h = squeeze(h_(:,:,it));
+  u = squeeze(u_(:,:,it));
+  v = squeeze(v_(:,:,it));
+
+
+  handle = image(x_1000km, y_1000km, (h'+H').*escala_altura); %image --> grafico de la matriz en colores
   set(handle,'CDataMapping','scaled');
   set(gca,'ydir','normal');
-  caxis(rango_alturas.*height_scale);
+  caxis(rango_alturas.*escala_altura);
 
-  % Plot the orography as black contours every 1000 m
-  hold on
-  warning off
-  contour(x_1000km, y_1000km, H',[1:1000:8001],'k');
-  warning on
+  hold on %clave
+  contourf(x_1000km, y_1000km, H',[1:1000:8001],'k');
+  
 
-  % Plot the velocity vectors
+  %GRAFICAMOS EL CAMPO DE VELOCIDADES
   quiver(x_1000km(3:interval:end), y_1000km(3:interval:end), ...
          u(3:interval:end, 3:interval:end)',...
          v(3:interval:end, 3:interval:end)','k','linewidth',0.2);
 
-  % Write the axis labels, title and time of the frame
-  xlabel('X distance (1000s of km)');
-  ylabel('Y distance (1000s of km)');
-  title(['\bf' height_title]);
-  text(0, max(y_1000km), ['Time = ' num2str(t_save(it)./3600) ' hours'],...
+ 
+  xlabel('X - Distancia latitudinal');
+  ylabel('Y - Distancia meridional');
+  title(['\bf' titulo_altura]);
+  text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
        'verticalalignment','bottom','fontsize',12);
 
-  % Set other axes properties and plot a colorbar
   daspect([1 1 1]);
   axis([0 max(x_1000km) 0 max(y_1000km)]);
-  colorbar
+   colorbar
+   drawnow
+    F(it)=getframe(gcf);
+    s = size(F(it).cdata);
+    fprintf('%d %d\n', s(2), s(1))
+   %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+   
+   
+   
+end
+
+video = VideoWriter('video_h_ondas_de_g.avi');
+open(video)
+writeVideo(video,F)
+close(video)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% vorticidad  %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ figure(2)
+  fig2=gcf;
+fig2.Units='normalized';
+fig2.OuterPosition=[0 0 1 1];
+
+ %LOOP PARA CADA FRAME DE LA ANIMACIÓN
+    
+for it = 1:nframes
+  clf %comando: Clear current figure window
+
+  % sacamos la altura y la componente de velocidad de cada frame, para cada it
+  h = squeeze(h_(:,:,it));
+  u = squeeze(u_(:,:,it));
+  v = squeeze(v_(:,:,it));
+    
   
-  % Compute the vorticity
   vorticity = zeros(size(u));
   vorticity(2:end-1,2:end-1) = (1/dy).*(u(2:end-1,1:end-2)-u(2:end-1,3:end)) ...
      + (1/dx).*(v(3:end,2:end-1)-v(1:end-2,2:end-1));
 
+
+   handle = image(x_1000km, y_1000km, vorticity');
+  set(handle,'CDataMapping','scaled');
+  set(gca,'ydir','normal');
+  caxis([-3 3].*1e-4);
+
   
+  xlabel('X - Distancia latitudinal');
+  ylabel('Y - Distancia meridional');
+  title('\bfVorticidad relativa(s^{-1})');
+  text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
+       'verticalalignment','bottom','fontsize',12);
 
   % Other axes properties and plot a colorbar
   daspect([1 1 1]);
   axis([0 max(x_1000km) 0 max(y_1000km)]);
   colorbar
-
    drawnow
-  
-   eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+    Fv(it)=getframe(gcf);
+        %2 lineas de abajo sirven para chequear el size de los frames si hay
+    %problemas para hacer el video
+    %sv = size(Fv(it).cdata);
+    %fprintf('%d %d\n', sv(2), sv(1))
+   %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+   
+   
    
 end
 
-
-%%%%%%%%%%%%%%%%%%% VIDEO %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% load the images
- images    = cell(nframes,1);
- for i=1:length(images)
-     images{i} = imread(sprintf('/home/jrr/Descargas/FINALES E1 MINOTTI/lax_w_matlab/frame%02d.png',i));
- end
- % create the video writer with 30 fps
- writerObj = VideoWriter('video.avi');
- writerObj.FrameRate = 10;
-   % open the video writer
-   open(writerObj);
-   % write the frames to the video
-    for u=1:10
-       % convert the image to a frame
-       frame = im2frame(images{u});
-       for v=1:10
-           writeVideo(writerObj, frame);
-       end
-   end
-   % close the writer object
-   close(writerObj);
-  % implay('Velocity.avi');
+video_vort = VideoWriter('video_vort_ondas_de_gravedad.avi');
+open(video_vort)
+writeVideo(video_vort,Fv)
+close(video_vort)
