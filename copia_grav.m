@@ -19,7 +19,7 @@ nx=254; % Number of zonal gridpoints
 ny=50;  % Number of meridional gridpoints
 
 dx=1.0e6; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
-dy=dx*0.5;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
+dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
 
 
 rango_alturas = [9500 10500]; % rango de alturas a graficar, en metros
@@ -38,7 +38,7 @@ y=(0:ny-1).*dy; % coordenada y, en metros ---> DISTANCIA MERIDIONAL
 
 %%% CONDICIONES INICIALES PARA LA ALTURA DEL FLUIDO
 std_blob = 10.0.*dy; % Standard deviation of blob (m)
-   desplazamiento = 9700 + 1000.*exp(-((X-0.9.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
+desplazamiento = 9700 + 1000.*exp(-((X-0.9.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
                                                      std_blob^2)); %(X-centro de la gaussiana en x))
 
 
@@ -151,7 +151,7 @@ for it = 1:nframes
          v(3:interval:end, 3:interval:end)','k','linewidth',0.2);
 
  
-  xlabel('X - Distancia latitudinal (unidades de miles de km)');
+  xlabel('X - Distancia latitudinal (unidades en miles de km)');
   ylabel('Y - Distancia meridional');
   title(['\bf' titulo_altura]);
   text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
