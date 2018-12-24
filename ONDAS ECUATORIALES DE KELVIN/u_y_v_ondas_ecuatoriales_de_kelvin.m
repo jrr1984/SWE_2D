@@ -5,30 +5,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ----------------------------------------------------------------------------------------------------------------------------
 clear all; clc;
-%%%%%% CONSTANTES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%% ELEGIR CONDICIONES DE CONTORNO
-promediadas = 1; 
-no_desliz = 2; %u(0,y) = u(end,y) = v(x,0) = v(x,end) = 0 ---> NO SLIP CONDITION, NO DESLIZAMIENTO
-
-%OPCION ELEGIDA:
-
-conds_contorno = no_desliz;
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
 g    = 9.81; 
 
 
-dt = 10;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
-dt_output = 60;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
-dias_del_exp = 3; %se usa luego más abajo para mostrar los datos
+dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
+dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
+dias_del_exp = 5; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
 
 
 nx=254; % Number of zonal gridpoints
-ny=150;  % Number of meridional gridpoints
+ny=50;  % Number of meridional gridpoints
 
-dx=1.0e6; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
+dx=100.0e3; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
 dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
 
 
@@ -47,8 +37,8 @@ y=(0:ny-1).*dy; % coordenada y, en metros ---> DISTANCIA MERIDIONAL
  H = zeros(nx, ny); %SUPERFICIE SÓLIDA DE ABAJO ES PLANA
 
 %%% CONDICIONES INICIALES PARA LA ALTURA DEL FLUIDO
-std_blob = 10.0.*dy; % Standard deviation of blob (m)
-desplazamiento = 9700 + 1000.*exp(-((X-0.9.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
+std_blob = 8.0.*dy; % Standard deviation of blob (m)
+desplazamiento = 9750 + 1000.*exp(-((X-0.25.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
                                                      std_blob^2)); %(X-centro de la gaussiana en x))
 
 
@@ -103,35 +93,8 @@ for n = 1:nt %% iteramos para cada paso temporal
   % Actualizamos las velocidades y la altura
   u = unext([end 1:end 1],[1 1:end end]);
   v = vnext([end 1:end 1],[1 1:end end]);
-  h(:,2:end-1) = hnext([end 1:end 1],:);
-
-  %IMPONEMOS CONDICIONES DE CONTORNO, PISAMOS DONDE QUEREMOS
-  % CONDS. DE CONTORNO PROMEDIADAS
-  if conds_contorno == 1
-     x_borde = ( h(2,:) + h(end-1,:) )./2;
-     h(1,:) = x_borde;
-     h(end,:) = x_borde;
-
-     y_borde = ( h(:,2) + h(:,end-1) )./2;
-     h(:,1) = y_borde;
-     h(:,end) = y_borde;
-     
-    u_borde = ( u(2,:) + u(end-1,:) )./2;
-    u(1,:) = u_borde;
-    u(end,:) = u_borde;
-
-
-    v_borde = ( v(:,2) + v(:,end-1) )./2;
-    v(:,1) = v_borde;
-    v(:,end) = v_borde;
-  end
-  
-  if conds_contorno == 2
-      v(:,[1 end]) = 0;
-     u([1 end],:) = 0;
-  end
-      
-
+   v(:,[1 end]) = 0;
+  h(:,2:end-1) = hnext([end 1:end 1],:);  
 
 end
 
@@ -240,7 +203,7 @@ for it = 1:nframes
    
 end
 
-video_u = VideoWriter('video_u.avi');
+video_u = VideoWriter('video_u_ecuatoriales.avi');
 open(video_u)
 writeVideo(video_u,F_u)
 close(video_u)

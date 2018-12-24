@@ -19,7 +19,7 @@ conds_contorno = no_desliz;
 g    = 9.81; 
 
 
-dt = 120;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
+dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
 dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
 dias_del_exp = 3; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
@@ -260,7 +260,7 @@ for it = 1:nframes
     %problemas para hacer el video
     %sv = size(Fv(it).cdata);
     %fprintf('%d %d\n', sv(2), sv(1))
-   eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+   %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
    
    
    

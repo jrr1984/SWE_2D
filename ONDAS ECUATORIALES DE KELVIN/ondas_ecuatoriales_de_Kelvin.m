@@ -6,28 +6,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ----------------------------------------------------------------------------------------------------------------------------
 clear all; clc;
-%%%%%% CONSTANTES
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%% ELEGIR CONDICIONES DE CONTORNO
-promediadas = 1; 
-no_desliz = 2; %u(0,y) = u(end,y) = v(x,0) = v(x,end) = 0 ---> NO SLIP CONDITION, NO DESLIZAMIENTO
 
-%OPCION ELEGIDA:
-
-conds_contorno = no_desliz;
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
 g    = 9.81;
-
-
 dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
 dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
-dias_del_exp = 15; %se usa luego más abajo para mostrar los datos
+dias_del_exp = 5; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
 
 
 nx=254; % Number of zonal gridpoints
-ny=150;  % Number of meridional gridpoints
+ny=50;  % Number of meridional gridpoints
 
 dx=100.0e3; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
 dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
@@ -49,7 +37,7 @@ y=(0:ny-1).*dy; % coordenada y, en metros ---> DISTANCIA MERIDIONAL
 
 %%% CONDICIONES INICIALES PARA LA ALTURA DEL FLUIDO
 std_blob = 8.0.*dy; % Standard deviation of blob (m)
-desplazamiento = 9750 + 1000.*exp(-((X-0.25.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
+desplazamiento = 9750 + 1000.*exp(-((X-0.9.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
                                                      std_blob^2)); %(X-centro de la gaussiana en x))
 
 %%% TERMINO DE CORIOLIS
@@ -100,37 +88,12 @@ for n = 1:nt %% iteramos para cada paso temporal
   [unext, vnext, hnext] = lax_wendroff(dx, dy, dt, g, u, v, h, ...
                                      SX_n_medio, SY_n_medio);
 
-  % Actualizamos las velocidades y la altura
+  % Actualizamos las velocidades y la altura + conds de contorno
   u = unext([end 1:end 1],[1 1:end end]);
   v = vnext([end 1:end 1],[1 1:end end]);
+  v(:,[1 end]) = 0;
   h(:,2:end-1) = hnext([end 1:end 1],:);
 
-  %IMPONEMOS CONDICIONES DE CONTORNO, PISAMOS DONDE QUEREMOS
-  % CONDS. DE CONTORNO PROMEDIADAS
-  if conds_contorno == 1
-     x_borde = ( h(2,:) + h(end-1,:) )./2;
-     h(1,:) = x_borde;
-     h(end,:) = x_borde;
-
-     y_borde = ( h(:,2) + h(:,end-1) )./2;
-     h(:,1) = y_borde;
-     h(:,end) = y_borde;
-     
-    u_borde = ( u(2,:) + u(end-1,:) )./2;
-    u(1,:) = u_borde;
-    u(end,:) = u_borde;
-
-
-    v_borde = ( v(:,2) + v(:,end-1) )./2;
-    v(:,1) = v_borde;
-    v(:,end) = v_borde;
-  end
-  
-  if conds_contorno == 2
-      v(:,[1 end]) = 0;
-     %u([1 end],:) = 0;
-  end
-      
 
 
 end
@@ -149,7 +112,7 @@ x_1000km = x.*1e-6;
 y_1000km = y.*1e-6;
 
 
-ncol=128;
+ncol=64;
 colormap(jet(ncol));
 %colormap(hsv(ncol));
 
@@ -209,7 +172,8 @@ for it = 1:nframes
   axis([0 max(x_1000km) 0 max(y_1000km)]);
    colorbar
    drawnow
-    %F(it)=getframe(gcf);
+  
+    Fa(it)=getframe(gcf);
     %s = size(F(it).cdata);
     %fprintf('%d %d\n', s(2), s(1))
    %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
@@ -218,9 +182,9 @@ for it = 1:nframes
    
 end
 
-video = VideoWriter('video_h_ondas_de_g.avi');
+video = VideoWriter('video_h_ondas_ecuatoriales.avi');
 open(video)
-writeVideo(video,F)
+ writeVideo(video,Fa)
 close(video)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -269,7 +233,7 @@ for it = 1:nframes
     %problemas para hacer el video
     %sv = size(Fv(it).cdata);
     %fprintf('%d %d\n', sv(2), sv(1))
-   eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+ %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
    
    
    
