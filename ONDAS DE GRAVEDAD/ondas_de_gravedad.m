@@ -260,7 +260,7 @@ for it = 1:nframes
     %problemas para hacer el video
     %sv = size(Fv(it).cdata);
     %fprintf('%d %d\n', sv(2), sv(1))
-   %eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
+   eval(['print -dpng frame',num2str(it,'%02d'),'.png']); %me guardo cada iteración como una imagen ---> frame
    
    
    
