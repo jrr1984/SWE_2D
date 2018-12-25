@@ -10,13 +10,13 @@ g    = 9.81;
 
 
 dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
-dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
-dias_del_exp = 5; %se usa luego más abajo para mostrar los datos
+dt_output = 200;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
+dias_del_exp = 1; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
 
 
-nx=254; % Number of zonal gridpoints
-ny=50;  % Number of meridional gridpoints
+nx=250; % Number of zonal gridpoints
+ny=150;  % Number of meridional gridpoints
 
 dx=100.0e3; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
 dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
@@ -38,17 +38,15 @@ y=(0:ny-1).*dy; % coordenada y, en metros ---> DISTANCIA MERIDIONAL
 
 %%% CONDICIONES INICIALES PARA LA ALTURA DEL FLUIDO
 std_blob = 8.0.*dy; % Standard deviation of blob (m)
-desplazamiento = 9750 + 1000.*exp(-((X-0.25.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
+desplazamiento = 9750 + 1000.*exp(-((X-mean(x)).^2+(Y-mean(y)).^2)./(2* ...
                                                      std_blob^2)); %(X-centro de la gaussiana en x))
 
 
                                                  
                                                  
 %%% TERMINO DE CORIOLIS
-
-f0    = 1e-4; 
-%f0=0.;
-beta = 2.5e-10;                                                 
+f0=0.;
+beta = 5.0e-10;
 F = f0+beta.*(Y-mean(y));   
                                                  
                                                  
@@ -189,7 +187,7 @@ for it = 1:nframes
    colorbar
    
    drawnow
-    F_u(it)=getframe(gcf);
+    F_uv(it)=getframe(gcf);
     %2 lineas de abajo sirven para chequear el size de los frames si hay
     %problemas para hacer el video
     %su = size(F_u(it).cdata);
@@ -202,5 +200,5 @@ end
 
 video_u = VideoWriter('video_u_ecuatoriales.avi');
 open(video_u)
-writeVideo(video_u,F_u)
+writeVideo(video_u,F_uv)
 close(video_u)

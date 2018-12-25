@@ -225,7 +225,7 @@ for it = 1:nframes
   axis([0 max(x_1000km) 0 max(y_1000km)]);
   colorbar
    drawnow
-    Fv(it)=getframe(gcf);
+   Fv(it)=getframe(gcf);
         %2 lineas de abajo sirven para chequear el size de los frames si hay
     %problemas para hacer el video
     %sv = size(Fv(it).cdata);
