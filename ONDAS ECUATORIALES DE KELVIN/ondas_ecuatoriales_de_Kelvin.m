@@ -9,13 +9,13 @@ clear all; clc;
 
 g    = 9.81;
 dt = 60;   % PASO TEMPORAL DE 1 MINUTO (60 segs)
-dt_output = 3600;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
-dias_del_exp = 5; %se usa luego más abajo para mostrar los datos
+dt_output = 200;  % TIEMPO ENTRE CADA OUTPUT DE 1 HORA (3600 segs), ENTRE CADA FRAME
+dias_del_exp = 1; %se usa luego más abajo para mostrar los datos
 dt_exp = dias_del_exp*24*3600.0;   % CANTIDAD DE DÍAS QUE DURA LA SIMULACIÓN en segundos -- forecast length
 
 
-nx=254; % Number of zonal gridpoints
-ny=50;  % Number of meridional gridpoints
+nx=250; % Number of zonal gridpoints
+ny=150;  % Number of meridional gridpoints
 
 dx=100.0e3; % ESPACIADO DE LA GRILLA EN X, en m ---> LATITUDES
 dy=dx;      % ESPACIADO DE LA GRILLA EN Y, en m ---> MERIDIANOS
@@ -36,14 +36,15 @@ y=(0:ny-1).*dy; % coordenada y, en metros ---> DISTANCIA MERIDIONAL
  H = zeros(nx, ny); %SUPERFICIE SÓLIDA DE ABAJO ES PLANA
 
 %%% CONDICIONES INICIALES PARA LA ALTURA DEL FLUIDO
-std_blob = 8.0.*dy; % Standard deviation of blob (m)
-desplazamiento = 9750 + 1000.*exp(-((X-0.9.*mean(x)).^2+(Y-mean(y)).^2)./(2* ...
+std_blob = 8.0*dy; % Standard deviation of blob (m)
+desplazamiento = 9750 + 1000.*exp(-((X-mean(x)).^2+(Y-mean(y)).^2)./(2* ...
                                                      std_blob^2)); %(X-centro de la gaussiana en x))
 
 %%% TERMINO DE CORIOLIS
 
+%f0   = 1.0e-4; 
 f0=0.;
-beta = 5e-10;                                                 
+beta = 5.0e-10;                                                 
 F = f0+beta.*(Y-mean(y));                                                 
 
 
@@ -144,7 +145,7 @@ for it = 1:nframes
   % sacamos la altura y la componente de velocidad de cada frame, para cada it
   h = squeeze(h_(:,:,it));
   u = squeeze(u_(:,:,it));
-  v = squeeze(v_(:,:,it));
+  %v = squeeze(v_(:,:,it));
 
 
   handle = image(x_1000km, y_1000km, (h'+H').*escala_altura); %image --> grafico de la matriz en colores
@@ -165,8 +166,6 @@ for it = 1:nframes
   xlabel('X - Distancia latitudinal');
   ylabel('Y - Distancia meridional');
   title(['\bf' titulo_altura]);
-  text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
-       'verticalalignment','bottom','fontsize',12);
 
   daspect([1 1 1]);
   axis([0 max(x_1000km) 0 max(y_1000km)]);
@@ -219,9 +218,7 @@ for it = 1:nframes
   
   xlabel('X - Distancia latitudinal');
   ylabel('Y - Distancia meridional');
-  title('\bfVorticidad relativa(s^{-1})');
-  text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
-       'verticalalignment','bottom','fontsize',12);
+  title('\bfVorticidad relativa(s^{-1})')
 
   % Other axes properties and plot a colorbar
   daspect([1 1 1]);

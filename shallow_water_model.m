@@ -36,13 +36,13 @@ SEA_MOUNT=4;
 g    = 9.81;                % Acceleration due to gravity (m/s2)
 %f    = 1e-4;              % Coriolis parameter (s-1)
  f=0.;
-beta = 5e-10;             % Meridional gradient of f (s-1m-1)
+beta = 5.0e-10;             % Meridional gradient of f (s-1m-1)
  %beta=0.;
 % beta=5e-10;
 
 dt_mins              = 1;   % Timestep (minutes)
-output_interval_mins = 60;  % Time between outputs (minutes)
-forecast_length_days = 15;   % Total simulation length (days)
+output_interval_mins = 15;  % Time between outputs (minutes)
+forecast_length_days = 4;   % Total simulation length (days)
 
 orography = FLAT;
 initial_conditions =GAUSSIAN_BLOB;

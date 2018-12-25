@@ -46,8 +46,9 @@ desplazamiento = 9750 + 1000.*exp(-((X-0.25.*mean(x)).^2+(Y-mean(y)).^2)./(2* ..
                                                  
 %%% TERMINO DE CORIOLIS
 
-f0=0.;
-beta = 5e-10;                                                 
+f0    = 1e-4; 
+%f0=0.;
+beta = 2.5e-10;                                                 
 F = f0+beta.*(Y-mean(y));   
                                                  
                                                  
@@ -156,8 +157,6 @@ for it = 1:nframes
   xlabel('X - Distancia latitudinal');
   ylabel('Y - Distancia meridional');
   title(['\bfu']);
-  text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
-       'verticalalignment','bottom','fontsize',12);
 
   daspect([1 1 1]);
   axis([0 max(x_1000km) 0 max(y_1000km)]);
@@ -184,8 +183,6 @@ for it = 1:nframes
   xlabel('X - Distancia latitudinal');
   ylabel('Y - Distancia meridional');
   title(['\bfv']);
-  text(0, max(y_1000km), ['Tiempo = ' num2str(t_(it)./3600) ' Horas'],...
-       'verticalalignment','bottom','fontsize',12);
 
   daspect([1 1 1]);
   axis([0 max(x_1000km) 0 max(y_1000km)]);
